@@ -1,0 +1,83 @@
+@use "../abstracts/mixins" as *;
+@use "../abstracts/functions" as *;
+@use "../abstracts/variables" as *;
+@use "../abstracts/include-media" as *;
+.is-boxed {
+	background: get-color(bg, 2);
+}
+
+.body-wrap {
+	background: get-color(bg, 1);
+	overflow: hidden;
+	/* Sticky footer */
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+.boxed-container {
+	max-width: 1440px;
+	margin: 0 auto;
+	@include shadow;
+}
+
+main {
+	flex: 1 0 auto;
+}
+
+.section-inner {
+	position: relative; /* To always display inner elements above pseudo decorative stuff */
+	padding-top: 48px;
+	padding-bottom: 48px;
+}
+
+@include media(">medium") {
+	.section-inner {
+		padding-top: 80px;
+		padding-bottom: 80px;
+	}
+}
+
+/* Align the page content vertically */
+@include media(">large") {
+	main {
+		display: flex;
+		align-items: center;
+	}
+
+	.hero {
+		width: 100%;
+	}
+}
+
+/*VIDEO*/
+#intro-video-container {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: black;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 9999;
+}
+
+#intro-video-container video {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+#close-intro-btn {
+	position: absolute;
+	top: 20px;
+	right: 20px;
+	background-color: rgba(0, 0, 0, 0.7);
+	color: white;
+	border: none;
+	padding: 10px 20px;
+	font-size: 16px;
+	cursor: pointer;
+	border-radius: 5px;
+}
