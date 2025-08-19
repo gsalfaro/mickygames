@@ -29,6 +29,35 @@ async function cargarProductos() {
 }
 
 /**
+ * Genera el enlace de WhatsApp con los detalles del producto
+ * @param {Object} producto - Objeto con los datos del producto
+ * @returns {string} - URL de WhatsApp con el mensaje
+ */
+function generarEnlaceWhatsApp(producto) {
+  const numeroWhatsApp = "525527730286"; // Mismo número que otros botones en la página
+
+  // Crear el mensaje con los detalles del producto
+  let mensaje = `¡Hola! Me interesa el siguiente producto:\n\n`;
+  mensaje += `📦 *${producto.descripcion}*\n`;
+  mensaje += `💰 Precio: $${producto.precio.toFixed(2)}\n`;
+
+  if (producto.detalles && producto.detalles.length > 0) {
+    mensaje += `\n✅ *Características:*\n`;
+    producto.detalles.forEach((detalle, index) => {
+      mensaje += `${index + 1}. ${detalle}\n`;
+    });
+  }
+
+  mensaje += `\n¿Podrían darme más información y disponibilidad?`;
+
+  // Codificar el mensaje para URL
+  const mensajeCodificado = encodeURIComponent(mensaje);
+
+  // Retornar la URL completa de WhatsApp
+  return `https://wa.me/${numeroWhatsApp}?text=${mensajeCodificado}`;
+}
+
+/**
  * Inserta los productos en el div ContenedorDeSaldos con el formato HTML solicitado
  */
 function insertarProductosEnHTML() {
@@ -72,7 +101,9 @@ function insertarProductosEnHTML() {
                     <div class="col-lg-4 wow slideInUp" data-wow-delay="${delay}s">
                         <div class="bg-white rounded shadow position-relative" style="z-index: 1">
                             <div class="border-bottom py-4 px-5 mb-4">
-                                <small class="text-uppercase">${producto.descripcion}</small>
+                                <small class="text-uppercase">${
+                                  producto.descripcion
+                                }</small>
                             </div>
                             <div class="p-5 pt-0">
                                 <h1 class="display-5 mb-3">
@@ -80,7 +111,9 @@ function insertarProductosEnHTML() {
                                     ${precioConDecimales}
                                 </h1>
                                 ${detallesHTML}
-                                <a href="" class="btn btn-primary py-2 px-4 mt-4">Pedir</a>
+                                <a href="${generarEnlaceWhatsApp(
+                                  producto
+                                )}" target="_blank" class="btn btn-primary py-2 px-4 mt-4">Pedir</a>
                             </div>
                         </div>
                     </div>`;

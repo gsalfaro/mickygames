@@ -55,24 +55,161 @@ class GoogleDriveReader {
   }
 
   /**
-   * Descarga el contenido de un archivo JSON desde Google Drive
+   * Descarga el contenido de un archivo JSON desde Google Drive usando URL directa
+   * @param {string} fileUrl - URL directa del archivo (webContentLink)
+   * @returns {Promise<Object>} - Contenido del archivo JSON parseado
+   */
+  async downloadJsonFile(fileUrl) {
+    try {
+      // Intentar descarga directa primero
+      try {
+        // Configurar headers para evitar problemas de CORS
+        const response = await fetch(fileUrl, {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json',
+          },
+          credentials: 'omit'
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al descargar archivo: ${response.status}`);
+        }
+
+        const jsonText = await response.text();
+        return JSON.parse(jsonText);
+      } catch (corsError) {
+        console.warn('CORS error con webContentLink, intentando con proxy...');
+        // Si falla por CORS, usar proxy
+        return await this.downloadJsonFileWithProxy(fileUrl);
+      }
+    } catch (error) {
+      console.error("Error al descargar archivo JSON:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Descarga usando proxy CORS para evitar bloqueos
+   * @param {string} fileUrl - URL del archivo
+   * @returns {Promise<Object>} - Contenido del archivo JSON parseado
+   */
+  async downloadJsonFileWithProxy(fileUrl) {
+    try {
+      // Lista de proxies CORS públicos (usar con cuidado en producción)
+      const corsProxies = [
+        'https://api.allorigins.win/get?url=',
+        'https://cors-anywhere.herokuapp.com/',
+        'https://api.codetabs.com/v1/proxy?quest='
+      ];
+
+      let lastError;
+      
+      for (const proxy of corsProxies) {
+        try {
+          const proxyUrl = proxy + encodeURIComponent(fileUrl);
+          const response = await fetch(proxyUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Proxy error: ${response.status}`);
+          }
+          
+          let jsonText;
+          const responseText = await response.text();
+          
+          // allorigins.win devuelve un objeto con la propiedad 'contents'
+          if (proxy.includes('allorigins.win')) {
+            const proxyResponse = JSON.parse(responseText);
+            jsonText = proxyResponse.contents;
+          } else {
+            jsonText = responseText;
+          }
+          
+          return JSON.parse(jsonText);
+        } catch (proxyError) {
+          console.warn(`Proxy ${proxy} falló:`, proxyError);
+          lastError = proxyError;
+          continue;
+        }
+      }
+      
+      throw lastError || new Error('Todos los proxies CORS fallaron');
+    } catch (error) {
+      console.error("Error al descargar archivo JSON con proxy:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Descarga usando XMLHttpRequest como alternativa a fetch
+   * @param {string} fileUrl - URL del archivo
+   * @returns {Promise<Object>} - Contenido del archivo JSON parseado
+   */
+  async downloadJsonFileWithXHR(fileUrl) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', fileUrl, true);
+      xhr.setRequestHeader('Accept', 'application/json, text/plain, */*');
+      
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              const jsonData = JSON.parse(xhr.responseText);
+              resolve(jsonData);
+            } catch (parseError) {
+              reject(new Error('Error parsing JSON: ' + parseError.message));
+            }
+          } else {
+            reject(new Error(`XHR Error: ${xhr.status}`));
+          }
+        }
+      };
+      
+      xhr.onerror = function() {
+        reject(new Error('XHR Network Error'));
+      };
+      
+      xhr.send();
+    });
+  }
+
+  /**
+   * Descarga el contenido de un archivo JSON usando el ID del archivo
    * @param {string} fileId - ID del archivo
    * @returns {Promise<Object>} - Contenido del archivo JSON parseado
    */
-  async downloadJsonFile(fileId) {
+  async downloadJsonFileById(fileId) {
     try {
-      const response = await fetch(
-        `${this.baseUrl}/files/${fileId}?alt=media&key=${this.apiKey}`
-      );
+      // Usar URL de descarga directa construida con el ID
+      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      
+      // Intentar descarga directa primero
+      try {
+        const response = await fetch(downloadUrl, {
+          method: 'GET',
+          mode: 'cors',
+          headers: {
+            'Accept': 'application/json, text/plain, */*',
+          },
+          credentials: 'omit'
+        });
 
-      if (!response.ok) {
-        throw new Error(`Error al descargar archivo: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`Error al descargar archivo por ID: ${response.status}`);
+        }
+
+        const jsonText = await response.text();
+        return JSON.parse(jsonText);
+      } catch (corsError) {
+        console.warn('CORS error con descarga directa, intentando con proxy...');
+        // Si falla por CORS, usar proxy
+        return await this.downloadJsonFileWithProxy(downloadUrl);
       }
-
-      const jsonText = await response.text();
-      return JSON.parse(jsonText);
     } catch (error) {
-      console.error("Error al descargar archivo JSON:", error);
+      console.error("Error al descargar archivo JSON por ID:", error);
       throw error;
     }
   }
@@ -115,8 +252,42 @@ class GoogleDriveReader {
         return null;
       }
 
-      // Descargar y parsear el archivo JSON
-      const jsonData = await this.downloadJsonFile(dataJsonFile.id);
+      // Verificar que tenga URL de descarga
+      if (!dataJsonFile.webContentLink) {
+        console.warn(
+          `El archivo data.json no tiene URL de descarga disponible en la carpeta ${subfolderId}`
+        );
+        return null;
+      }
+
+      // Descargar y parsear el archivo JSON usando múltiples métodos de fallback
+      let jsonData;
+      try {
+        // Intento 1: Usar webContentLink
+        jsonData = await this.downloadJsonFile(dataJsonFile.webContentLink);
+      } catch (error) {
+        console.warn(
+          `Error con webContentLink, intentando con ID del archivo...`
+        );
+        try {
+          // Intento 2: Usar ID del archivo con URL de descarga directa
+          jsonData = await this.downloadJsonFileById(dataJsonFile.id);
+        } catch (idError) {
+          console.warn(
+            `Error con ID, intentando XMLHttpRequest como último recurso...`
+          );
+          try {
+            // Intento 3: Usar XMLHttpRequest con webContentLink
+            jsonData = await this.downloadJsonFileWithXHR(dataJsonFile.webContentLink);
+          } catch (xhrError) {
+            console.error(
+              `Error descargando data.json con todos los métodos:`,
+              { webContentLink: error, byId: idError, xhr: xhrError }
+            );
+            throw new Error(`No se pudo descargar data.json: ${error.message}`);
+          }
+        }
+      }
 
       // Buscar todas las imágenes
       const imageFiles = files.filter((file) =>
