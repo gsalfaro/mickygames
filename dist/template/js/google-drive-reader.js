@@ -371,7 +371,7 @@ async function leerCarpetaGoogleDrive(apiKey, driveUrl = null) {
   // URL por defecto si no se proporciona
   const url =
     driveUrl ||
-    "https://drive.google.com/drive/folders/1LV0GvH6elctNgadaXyZhD5QYGZOUweBp?usp=sharing";
+    "https://drive.google.com/drive/folders/1W8JRJdGEftF6E-RtJ1YlwcDOBQtZP1_W";
 
   const reader = new GoogleDriveReader(apiKey);
   return await reader.readDriveFolder(url);

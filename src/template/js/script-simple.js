@@ -40,9 +40,9 @@ async function obtenerImagenBase64(imageId) {
   }
 
   const urls = [
-    `https://lh3.googleusercontent.com/d/${imageId}=s600`,
+    `https://lh3.googleusercontent.com/d/${imageId}=s500`,
     `https://drive.google.com/uc?export=view&id=${imageId}`,
-    `https://drive.google.com/thumbnail?id=${imageId}&sz=w800`,
+    `https://drive.google.com/thumbnail?id=${imageId}&sz=w500`,
   ];
 
   const proxies = [
