@@ -65,13 +65,13 @@ class GoogleDriveReader {
       try {
         // Configurar headers para evitar problemas de CORS
         const response = await fetch(fileUrl, {
-          method: 'GET',
-          mode: 'cors',
+          method: "GET",
+          mode: "cors",
           headers: {
-            'Accept': 'application/json, text/plain, */*',
-            'Content-Type': 'application/json',
+            Accept: "application/json, text/plain, */*",
+            "Content-Type": "application/json",
           },
-          credentials: 'omit'
+          credentials: "omit",
         });
 
         if (!response.ok) {
@@ -81,7 +81,7 @@ class GoogleDriveReader {
         const jsonText = await response.text();
         return JSON.parse(jsonText);
       } catch (corsError) {
-        console.warn('CORS error con webContentLink, intentando con proxy...');
+        console.warn("CORS error con webContentLink, intentando con proxy...");
         // Si falla por CORS, usar proxy
         return await this.downloadJsonFileWithProxy(fileUrl);
       }
@@ -100,33 +100,33 @@ class GoogleDriveReader {
     try {
       // Lista de proxies CORS públicos (usar con cuidado en producción)
       const corsProxies = [
-        'https://api.allorigins.win/get?url=',
-        'https://cors-anywhere.herokuapp.com/',
-        'https://api.codetabs.com/v1/proxy?quest='
+        "https://api.allorigins.win/get?url=",
+        "https://cors-anywhere.herokuapp.com/",
+        "https://api.codetabs.com/v1/proxy?quest=",
       ];
 
       let lastError;
-      
+
       for (const proxy of corsProxies) {
         try {
           const proxyUrl = proxy + encodeURIComponent(fileUrl);
           const response = await fetch(proxyUrl);
-          
+
           if (!response.ok) {
             throw new Error(`Proxy error: ${response.status}`);
           }
-          
+
           let jsonText;
           const responseText = await response.text();
-          
+
           // allorigins.win devuelve un objeto con la propiedad 'contents'
-          if (proxy.includes('allorigins.win')) {
+          if (proxy.includes("allorigins.win")) {
             const proxyResponse = JSON.parse(responseText);
             jsonText = proxyResponse.contents;
           } else {
             jsonText = responseText;
           }
-          
+
           return JSON.parse(jsonText);
         } catch (proxyError) {
           console.warn(`Proxy ${proxy} falló:`, proxyError);
@@ -134,8 +134,8 @@ class GoogleDriveReader {
           continue;
         }
       }
-      
-      throw lastError || new Error('Todos los proxies CORS fallaron');
+
+      throw lastError || new Error("Todos los proxies CORS fallaron");
     } catch (error) {
       console.error("Error al descargar archivo JSON con proxy:", error);
       throw error;
@@ -150,28 +150,28 @@ class GoogleDriveReader {
   async downloadJsonFileWithXHR(fileUrl) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('GET', fileUrl, true);
-      xhr.setRequestHeader('Accept', 'application/json, text/plain, */*');
-      
-      xhr.onreadystatechange = function() {
+      xhr.open("GET", fileUrl, true);
+      xhr.setRequestHeader("Accept", "application/json, text/plain, */*");
+
+      xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
           if (xhr.status === 200) {
             try {
               const jsonData = JSON.parse(xhr.responseText);
               resolve(jsonData);
             } catch (parseError) {
-              reject(new Error('Error parsing JSON: ' + parseError.message));
+              reject(new Error("Error parsing JSON: " + parseError.message));
             }
           } else {
             reject(new Error(`XHR Error: ${xhr.status}`));
           }
         }
       };
-      
-      xhr.onerror = function() {
-        reject(new Error('XHR Network Error'));
+
+      xhr.onerror = function () {
+        reject(new Error("XHR Network Error"));
       };
-      
+
       xhr.send();
     });
   }
@@ -185,26 +185,30 @@ class GoogleDriveReader {
     try {
       // Usar URL de descarga directa construida con el ID
       const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      
+
       // Intentar descarga directa primero
       try {
         const response = await fetch(downloadUrl, {
-          method: 'GET',
-          mode: 'cors',
+          method: "GET",
+          mode: "cors",
           headers: {
-            'Accept': 'application/json, text/plain, */*',
+            Accept: "application/json, text/plain, */*",
           },
-          credentials: 'omit'
+          credentials: "omit",
         });
 
         if (!response.ok) {
-          throw new Error(`Error al descargar archivo por ID: ${response.status}`);
+          throw new Error(
+            `Error al descargar archivo por ID: ${response.status}`
+          );
         }
 
         const jsonText = await response.text();
         return JSON.parse(jsonText);
       } catch (corsError) {
-        console.warn('CORS error con descarga directa, intentando con proxy...');
+        console.warn(
+          "CORS error con descarga directa, intentando con proxy..."
+        );
         // Si falla por CORS, usar proxy
         return await this.downloadJsonFileWithProxy(downloadUrl);
       }
@@ -237,6 +241,7 @@ class GoogleDriveReader {
    * Procesa una subcarpeta individual para extraer data.json e imágenes
    * @param {string} subfolderId - ID de la subcarpeta
    * @returns {Promise<Object>} - Objeto con la información del producto
+   * Estructura: { titulo, descripcion, precio, detalles, imagenes }
    */
   async processSubfolder(subfolderId) {
     try {
@@ -278,7 +283,9 @@ class GoogleDriveReader {
           );
           try {
             // Intento 3: Usar XMLHttpRequest con webContentLink
-            jsonData = await this.downloadJsonFileWithXHR(dataJsonFile.webContentLink);
+            jsonData = await this.downloadJsonFileWithXHR(
+              dataJsonFile.webContentLink
+            );
           } catch (xhrError) {
             console.error(
               `Error descargando data.json con todos los métodos:`,
@@ -301,6 +308,7 @@ class GoogleDriveReader {
 
       // Crear el objeto resultado
       return {
+        titulo: jsonData.titulo || "",
         descripcion: jsonData.descripcion || "",
         precio: parseFloat(jsonData.precio) || 0,
         detalles: Array.isArray(jsonData.detalles) ? jsonData.detalles : [],
