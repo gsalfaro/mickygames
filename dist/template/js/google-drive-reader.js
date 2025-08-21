@@ -61,30 +61,7 @@ class GoogleDriveReader {
    */
   async downloadJsonFile(fileUrl) {
     try {
-      // Intentar descarga directa primero
-      try {
-        // Configurar headers para evitar problemas de CORS
-        const response = await fetch(fileUrl, {
-          method: "GET",
-          mode: "cors",
-          headers: {
-            Accept: "application/json, text/plain, */*",
-            "Content-Type": "application/json",
-          },
-          credentials: "omit",
-        });
-
-        if (!response.ok) {
-          throw new Error(`Error al descargar archivo: ${response.status}`);
-        }
-
-        const jsonText = await response.text();
-        return JSON.parse(jsonText);
-      } catch (corsError) {
-        console.warn("CORS error con webContentLink, intentando con proxy...");
-        // Si falla por CORS, usar proxy
-        return await this.downloadJsonFileWithProxy(fileUrl);
-      }
+      return await this.downloadJsonFileWithProxy(fileUrl);
     } catch (error) {
       console.error("Error al descargar archivo JSON:", error);
       throw error;
@@ -100,8 +77,7 @@ class GoogleDriveReader {
     try {
       // Lista de proxies CORS públicos (usar con cuidado en producción)
       const corsProxies = [
-        "https://api.allorigins.win/get?url=",
-        "https://cors-anywhere.herokuapp.com/",
+        //"https://api.allorigins.win/get?url=",
         "https://api.codetabs.com/v1/proxy?quest=",
       ];
 

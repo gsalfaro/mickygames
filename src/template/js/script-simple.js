@@ -106,19 +106,42 @@ async function cargarProductos() {
   try {
     console.log("Obteniendo productos...");
 
+    // Actualizar mensaje de carga
+    const mensajeCarga = document.getElementById("mensajeCarga");
+    if (mensajeCarga) {
+      mensajeCarga.querySelector("h5").textContent =
+        "Conectando con Google Drive...";
+      mensajeCarga.querySelector("p").textContent =
+        "Obteniendo lista de productos disponibles";
+    }
+
     // Guardar los resultados de obtenerSaldos() en la variable
     resultadosProductos = await obtenerSaldos();
 
     console.log("Productos obtenidos:", resultadosProductos);
+
+    // Actualizar mensaje para indicar que se están procesando las imágenes
+    if (mensajeCarga) {
+      mensajeCarga.querySelector("h5").textContent = "Procesando imágenes...";
+      mensajeCarga.querySelector("p").textContent =
+        "Preparando la galería de productos";
+    }
 
     // Mostrar en el div ContenedorDeSaldos
     insertarProductosEnHTML();
   } catch (error) {
     console.error("Error al cargar productos:", error);
     document.getElementById("ContenedorDeSaldos").innerHTML =
-      '<div class="col-12"><p class="text-danger">Error al cargar productos: ' +
+      '<div class="col-12 text-center py-5">' +
+      '<div class="alert alert-danger" role="alert">' +
+      '<h4 class="alert-heading">¡Error al cargar productos!</h4>' +
+      '<p class="mb-0">No se pudieron cargar los productos: ' +
       error.message +
-      "</p></div>";
+      "</p>" +
+      "<hr>" +
+      '<p class="mb-0">Por favor, intente refrescar la página o contacte al administrador.</p>' +
+      "</div>" +
+      "</div>";
   }
 }
 
@@ -239,6 +262,33 @@ function insertarProductosEnHTML() {
   console.log(
     `Se insertaron ${resultadosProductos.length} productos en el HTML`
   );
+
+  // Mostrar mensaje de éxito temporal
+  setTimeout(() => {
+    const primerProducto = document.querySelector(
+      "#ContenedorDeSaldos .col-lg-4"
+    );
+    if (primerProducto) {
+      const mensajeExito = document.createElement("div");
+      mensajeExito.className =
+        "alert alert-success alert-dismissible fade show position-fixed";
+      mensajeExito.style.cssText =
+        "top: 20px; right: 20px; z-index: 1050; min-width: 300px;";
+      mensajeExito.innerHTML = `
+        <i class="fa fa-check-circle me-2"></i>
+        <strong>¡Productos cargados!</strong> Se encontraron ${resultadosProductos.length} productos disponibles.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      document.body.appendChild(mensajeExito);
+
+      // Auto-remover después de 4 segundos
+      setTimeout(() => {
+        if (mensajeExito.parentNode) {
+          mensajeExito.remove();
+        }
+      }, 4000);
+    }
+  }, 500);
 }
 
 /**
