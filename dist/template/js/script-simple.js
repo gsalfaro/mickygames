@@ -446,5 +446,6 @@ function ampliarImagen(imageBase64) {
 
 // Ejecutar automáticamente cuando se carga la página
 document.addEventListener("DOMContentLoaded", function () {
-  cargarProductos();
+  //Deshabilitar temporalemente la carga de los saldos
+  //cargarProductos();
 });
